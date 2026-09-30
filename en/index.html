@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Callback requests: 60-second acknowledgment and proof log</title>
+<style>
+  body { font-family: system-ui, sans-serif; line-height: 1.55; color: #1a1a1a; margin: 0;
+         background: #fbfbf9; }
+  main { max-width: 46rem; margin: 0 auto; padding: 1rem; }
+  h1 { font-size: 1.7rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; border-bottom: 1px solid #ccc;
+       padding-bottom: 0.2rem; }
+  .table { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  th, td { border: 1px solid #bbb; padding: 0.45rem 0.6rem; text-align: left;
+           vertical-align: top; }
+  th { background: #eeeeea; }
+  img { max-width: 100%; height: auto; border: 1px solid #ccc; margin: 0.5rem 0; }
+  a { color: #1d4f91; }
+</style>
+</head>
+<body>
+<main>
+<h1>Callback requests: 60-second acknowledgment and proof log</h1>
+<p><strong>Demo on fictional data. Not legal advice: each business remains responsible for its own compliance.</strong>
+Exemple Rénovation (démo) is a fictional French energy-renovation company. · <a href="../">Version française</a></p>
+<h2>Measured on 30 September 2026</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>What is checked</th>
+<th>Target</th>
+<th>Measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Acknowledgment email received in under 60 s</td>
+<td>50 of 50</td>
+<td>50 of 50 · median ≤ 0.3 s · p95 ≤ 0.3 s · max ≤ 0.3 s</td>
+</tr>
+<tr>
+<td>Callback deadline matches a hand-checked reference table</td>
+<td>20 of 20</td>
+<td>20 of 20 (checked by hand: 20)</td>
+</tr>
+<tr>
+<td>Callback logging refused and recorded after the deadline</td>
+<td>10 of 10</td>
+<td>10 of 10 · controls accepted before the deadline: 3 of 3</td>
+</tr>
+<tr>
+<td>Email alert on the business day before the deadline, for untreated requests</td>
+<td>10 of 10</td>
+<td>10 of 10 · false alerts: 0</td>
+</tr>
+<tr>
+<td>Log alterations detected by the integrity check</td>
+<td>3 of 3</td>
+<td>3 of 3</td>
+</tr>
+<tr>
+<td>One-file export of a request by a non-technical person</td>
+<td>2 min at most</td>
+<td>42 s (a non-technical person)</td>
+</tr>
+<tr>
+<td>Consumer messages limited to the request's subject, read one by one</td>
+<td>5 of 5</td>
+<td>5 of 5</td>
+</tr>
+</tbody>
+</table></div>
+<h2>The problem</h2>
+<p>In France, when a consumer asks an energy-renovation company for information, the callback must happen within five business days of the request, cover only the goods or services requested, and the company must keep proof of the request for three years (French Consumer Code, art. R.223-4). "I already call my leads back." The demo does not touch the call. It adds three things: a correct deadline, a lock after it, and proof that can be exported in minutes.</p>
+<h2>What the demo does</h2>
+<p>It plugs into the website form and the mailbox. It replaces neither, nor the CRM.</p>
+<ol>
+<li><strong>Acknowledgment email</strong>: reference, subject, callback deadline, company identity, opt-out (reply STOP, handled by the company). No marketing, no links.</li>
+<li><strong>Deadline</strong>: 5 business days (Monday to Saturday, excluding Sundays and national public holidays), Paris time, daylight-saving change included. The rule is displayed.</li>
+<li><strong>Callback task</strong> emailed to the sales rep, then an <strong>alert</strong> on the business day before the deadline if no "reached" call is logged.</li>
+<li><strong>Lock</strong>: after the deadline, the call-logging form refuses every attempt and records it. Only a new request from the consumer opens a new file. The tool cannot stop a phone call; it refuses to log it and keeps a trace.</li>
+<li><strong>Append-only log</strong>: every event is time-stamped in UTC and Paris time and chained with SHA-256 hashes. The integrity check detects any change to, or deletion of, an entry, except the most recent one (see Limits).</li>
+<li><strong>Export</strong>: one file per request, readable without software.</li>
+</ol>
+<p><img alt="Acknowledgment and its timestamp" src="../img/capture-1.png">
+<img alt="Deadline and lock" src="../img/capture-2.png">
+<img alt="Log and integrity check" src="../img/capture-3.png">
+<img alt="Export of one request" src="../img/capture-4.png"></p>
+<h2>How it was measured</h2>
+<ul>
+<li><strong>Acknowledgments</strong>: 50 requests sent one at a time, every 2 seconds, by a script outside the system. Latency runs from the form submission to the message appearing in the test inbox. Internet delivery by the company's email provider is not included. Three hand-timed runs: 1 s; 1 s; 1 s. The test inbox is polled every 0.25 s: the delays shown are upper bounds.</li>
+<li><strong>Deadlines</strong>: 20 required cases (Saturday, Sunday, 11 November, the day before a holiday, 23:59 and 00:01, the night of the clock change, Christmas, Alsace-Moselle), compared with a table recomputed by hand.</li>
+<li><strong>Lock, alerts, log</strong>: automated tests with a simulated clock; alerts are counted in the test inbox.</li>
+<li><strong>Export</strong>: timed. <strong>Messages</strong>: read one by one.</li>
+<li>Environment: n8n 2.40.7 and PostgreSQL 16.15 running locally (Docker), Mailpit test inbox.</li>
+</ul>
+<h2>Limits</h2>
+<ul>
+<li>This is a demo, not a production track record.</li>
+<li>By default, the day of the request does not count; an option counts it. The exact definition of business days is for each company's counsel to confirm.</li>
+<li>The integrity check does not cover the most recent entry (deletion, or rewrite with a recomputed hash), nor a full rewrite of the log by the database administrator. A daily hash copied outside the database, or a qualified timestamp, can be added.</li>
+<li>The acknowledgment is a transactional email: each company has its messages reviewed.</li>
+<li>The demo also tests an Alsace-Moselle option (regional holidays). It will not be offered to clients: a regional holiday can only push the deadline later.</li>
+<li>The call days and hours allowed by art. D.223-9 of the French Consumer Code are not enforced by the demo.</li>
+</ul>
+<p>n8n workflows (export without credentials): https://github.com/HgLovis-rqm/rappel-60s-demo/tree/main/n8n</p>
+<p><em>Chaos Systems · 30 September 2026</em></p>
+</main>
+</body>
+</html>

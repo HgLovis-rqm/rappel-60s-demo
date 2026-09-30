@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demande de rappel : accusé en 60 s et journal de preuve</title>
+<style>
+  body { font-family: system-ui, sans-serif; line-height: 1.55; color: #1a1a1a; margin: 0;
+         background: #fbfbf9; }
+  main { max-width: 46rem; margin: 0 auto; padding: 1rem; }
+  h1 { font-size: 1.7rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; border-bottom: 1px solid #ccc;
+       padding-bottom: 0.2rem; }
+  .table { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  th, td { border: 1px solid #bbb; padding: 0.45rem 0.6rem; text-align: left;
+           vertical-align: top; }
+  th { background: #eeeeea; }
+  img { max-width: 100%; height: auto; border: 1px solid #ccc; margin: 0.5rem 0; }
+  a { color: #1d4f91; }
+</style>
+</head>
+<body>
+<main>
+<h1>Demande de rappel : accusé en 60 s et journal de preuve</h1>
+<p><strong>Démonstration sur données fictives. Ne constitue pas un conseil juridique : l'entreprise reste responsable de sa conformité.</strong>
+Exemple Rénovation (démo) est une entreprise fictive. · <a href="en/">English version</a></p>
+<h2>Mesuré le 30 septembre 2026</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Ce qui est vérifié</th>
+<th>Objectif</th>
+<th>Mesuré</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accusé de réception reçu en moins de 60 s</td>
+<td>50 sur 50</td>
+<td>50 sur 50 · médiane ≤ 0,3 s · p95 ≤ 0,3 s · max ≤ 0,3 s</td>
+</tr>
+<tr>
+<td>Date limite de rappel identique à une table recalculée à la main</td>
+<td>20 sur 20</td>
+<td>20 sur 20 (vérifiées à la main : 20)</td>
+</tr>
+<tr>
+<td>Enregistrement d'un appel refusé et journalisé après la date limite</td>
+<td>10 sur 10</td>
+<td>10 sur 10 · témoins acceptés avant la date limite : 3 sur 3</td>
+</tr>
+<tr>
+<td>Alerte e-mail la veille (jour ouvrable) pour une demande non traitée</td>
+<td>10 sur 10</td>
+<td>10 sur 10 · alertes à tort : 0</td>
+</tr>
+<tr>
+<td>Modifications du journal détectées par le contrôle d'intégrité</td>
+<td>3 sur 3</td>
+<td>3 sur 3</td>
+</tr>
+<tr>
+<td>Dossier exporté en un fichier par une personne non technique</td>
+<td>2 min au plus</td>
+<td>42 s (une personne non technique)</td>
+</tr>
+<tr>
+<td>Messages au consommateur limités à l'objet de sa demande, relus</td>
+<td>5 sur 5</td>
+<td>5 sur 5</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Le problème</h2>
+<p>« Je rappelle déjà mes demandes. » La démonstration ne touche pas à l'appel. Elle ajoute trois choses : une date limite calculée juste, un verrou après cette date, et une preuve exportable en quelques minutes.</p>
+<p>Pour la rénovation énergétique, le code de la consommation encadre ce rappel : l'appel qui répond à la demande d'information d'un particulier est passé dans les cinq jours ouvrables suivant la demande, il ne porte que sur les biens ou services demandés, et le professionnel conserve trois ans de quoi justifier la demande (art. R.223-4).</p>
+<h2>Ce que fait la démonstration</h2>
+<p>Elle se branche sur le formulaire du site et sur la messagerie. Elle ne remplace ni l'un ni l'autre, ni le CRM.</p>
+<ol>
+<li><strong>Accusé de réception</strong> par e-mail : référence, objet, date limite de l'appel, identité de l'entreprise, moyen de s'opposer (réponse STOP, traitée par l'entreprise). Aucun contenu commercial, aucun lien.</li>
+<li><strong>Date limite</strong> : 5 jours ouvrables, du lundi au samedi, hors dimanches et jours fériés nationaux, en heure de Paris, changement d'heure compris. La règle appliquée est affichée.</li>
+<li><strong>Tâche d'appel</strong> envoyée au commercial, puis <strong>alerte</strong> la veille (jour ouvrable) si aucun appel « client joint » n'est enregistré.</li>
+<li><strong>Verrou</strong> : après la date limite, le formulaire d'enregistrement d'appel refuse toute tentative et la trace dans le journal. Seule une nouvelle demande du particulier ouvre un nouveau dossier. L'outil ne peut pas empêcher un appel téléphonique : il refuse son enregistrement et en garde la trace.</li>
+<li><strong>Journal en ajout seul</strong> : chaque événement est horodaté en UTC et en heure de Paris, puis chaîné par empreinte SHA-256. Le contrôle d'intégrité détecte toute modification ou suppression d'une entrée, sauf sur la dernière entrée du journal (voir Limites).</li>
+<li><strong>Export</strong> d'un dossier en un fichier lisible sans logiciel : la demande telle que formulée, l'accusé, la date limite et sa règle, les tentatives d'appel, le statut et la date de fin de conservation (3 ans après la demande).</li>
+</ol>
+<p><img alt="Accusé de réception et son horodatage" src="img/capture-1.png">
+<img alt="Date limite et verrou" src="img/capture-2.png">
+<img alt="Journal et contrôle d'intégrité" src="img/capture-3.png">
+<img alt="Export d'un dossier" src="img/capture-4.png"></p>
+<h2>Comment c'est mesuré</h2>
+<ul>
+<li><strong>Accusés</strong> : 50 demandes envoyées une par une, toutes les 2 secondes, par un script extérieur au système. Le délai va de l'envoi du formulaire à l'apparition du message dans la boîte de réception de test. La remise sur Internet par la messagerie de l'entreprise n'est pas incluse. Trois essais chronométrés à la main : 1 s ; 1 s ; 1 s. La boîte de réception est interrogée toutes les 0,25 s : les délais affichés sont des bornes supérieures.</li>
+<li><strong>Dates limites</strong> : 20 cas imposés (samedi, dimanche, 11 novembre, veille de jour férié, 23 h 59 et 0 h 01, nuit du changement d'heure, Noël, Alsace-Moselle), comparés à une table recalculée à la main.</li>
+<li><strong>Verrou, alertes, journal</strong> : tests automatiques avec une horloge simulée ; les alertes sont comptées dans la boîte de réception de test.</li>
+<li><strong>Export</strong> : chronométré. <strong>Messages</strong> : relus un par un.</li>
+<li>Environnement : n8n 2.40.7 et PostgreSQL 16.15 en local (Docker), boîte de réception de test Mailpit.</li>
+</ul>
+<h2>Limites</h2>
+<ul>
+<li>C'est une démonstration, pas un historique de production.</li>
+<li>Par défaut, le jour de la demande ne compte pas ; une option le compte. La définition exacte des jours ouvrables est à valider par le conseil de chaque entreprise.</li>
+<li>Le contrôle d'intégrité ne couvre pas la dernière entrée du journal (suppression, ou réécriture avec empreinte recalculée), ni une réécriture complète du journal par l'administrateur de la base. Une empreinte copiée chaque jour hors de la base, ou un horodatage qualifié, peut s'y ajouter.</li>
+<li>L'accusé de réception est un e-mail transactionnel : chaque entreprise fait valider ses messages.</li>
+<li>La démonstration teste aussi une option Alsace-Moselle (fériés locaux). Elle ne sera pas proposée aux clients : un férié local ne peut que reculer la date limite.</li>
+<li>Les jours et heures d'appel autorisés par l'article D.223-9 du code de la consommation ne sont pas contrôlés par la démonstration.</li>
+</ul>
+<h2>Ce que reçoit l'entreprise</h2>
+<ul>
+<li>L'installation dans ses propres comptes, avec des identifiants à son nom.</li>
+<li>Un mode d'emploi en français : fonctionnement, modification des messages, que faire en cas de problème.</li>
+<li>Le même test d'acceptation, à relancer après chaque modification.</li>
+</ul>
+<p>Workflows n8n (export sans identifiants) : https://github.com/HgLovis-rqm/rappel-60s-demo/tree/main/n8n</p>
+<p><em>Chaos Systems · 30 septembre 2026</em></p>
+</main>
+</body>
+</html>

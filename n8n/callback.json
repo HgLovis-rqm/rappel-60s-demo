@@ -1,0 +1,136 @@
+{
+  "id": "cbdemoCallback01",
+  "name": "demo-callback",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Enregistrer un appel",
+        "formDescription": "Démonstration — données fictives",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Référence",
+              "fieldName": "ref",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldType": "hiddenField",
+              "fieldName": "t"
+            },
+            {
+              "fieldLabel": "Résultat",
+              "fieldName": "outcome",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Client joint"
+                  },
+                  {
+                    "option": "Pas de réponse"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Objet de l'appel",
+              "fieldName": "call_subject",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Votre nom",
+              "fieldName": "agent",
+              "fieldType": "text",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false,
+          "buttonLabel": "Enregistrer",
+          "path": "rappel",
+          "ignoreBots": true
+        }
+      },
+      "id": "bd6da49e-2a7e-5358-abc8-6bfa5295eb42",
+      "name": "Callback form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a079f710-c218-5a8a-9eb8-8fc700bd68e3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from app.record_callback($1,$2,$3,$4,$5)",
+        "options": {
+          "queryReplacement": "={{ [ String($json.ref ?? ''), String($json.t ?? ''), $json.outcome === 'Client joint' ? 'joint' : $json.outcome === 'Pas de réponse' ? 'non_joint' : '', String($json.call_subject ?? ''), String($json.agent ?? '') ] }}"
+        }
+      },
+      "id": "4794cc29-c97f-5b18-a5f1-c8d94ab891c4",
+      "name": "Record callback",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        220,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "PG app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "showText",
+        "responseText": "={{ $json.message_html }}"
+      },
+      "id": "a993df7c-6bfe-57e4-8b28-408bdfa0fba5",
+      "name": "Result page",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        0
+      ],
+      "webhookId": "9b47175e-d261-58cf-8c87-e26b430a63d7"
+    }
+  ],
+  "connections": {
+    "Callback form": {
+      "main": [
+        [
+          {
+            "node": "Record callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record callback": {
+      "main": [
+        [
+          {
+            "node": "Result page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  }
+}

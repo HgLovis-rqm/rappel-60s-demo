@@ -1,0 +1,415 @@
+{
+  "id": "cbdemoIntake0001",
+  "name": "demo-intake",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demande",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e80c32f4-3204-5d60-a764-7262272c0341",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "e21fa301-539c-54a4-8f70-7031467564cf"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from app.submit_request($1,$2,$3,$4,$5,$6,$7,$8)",
+        "options": {
+          "queryReplacement": "={{ [ 'web_form', String($json.body.full_name ?? ''), String($json.body.email ?? ''), String($json.body.phone ?? ''), String($json.body.category ?? ''), String($json.body.request_text ?? ''), String($json.body.consent_label ?? ''), $json.body.consent_checked === 'on' ] }}"
+        }
+      },
+      "id": "b686249e-4788-5061-8c6b-e3dbd5d84e95",
+      "name": "Submit request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        220,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "PG app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "67a71af6-dd2f-5f1c-aeae-644473490876",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "created",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "created"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e32c30f4-bc3d-5977-9b7b-7c2b3566855d",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "duplicate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "duplicate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dba9e24b-0469-5c19-8fc5-7da43a904275",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "invalid",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "invalid"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9a21ffd0-f406-5057-b14c-93f29d6c7b28",
+      "name": "Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "contact@exemple-renovation.example",
+        "toEmail": "={{ $json.ack_to }}",
+        "subject": "={{ $json.ack_subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.ack_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "4227e148-84d7-5929-b718-9f7fbf3f643b",
+      "name": "Send acknowledgement",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        -200
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_ME",
+          "name": "SMTP demo"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select app.log_sent($1,'ack',$2,$3,$4)",
+        "options": {
+          "queryReplacement": "={{ [ $('Submit request').item.json.ref, $('Submit request').item.json.ack_to, $('Submit request').item.json.ack_subject, $('Submit request').item.json.ack_body ] }}"
+        }
+      },
+      "id": "c22fa6f4-1531-5309-82bd-eecc0f5a1071",
+      "name": "Log acknowledgement",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        880,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "PG app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "contact@exemple-renovation.example",
+        "toEmail": "={{ $('Submit request').item.json.staff_to }}",
+        "subject": "={{ $('Submit request').item.json.staff_subject }}",
+        "emailFormat": "text",
+        "text": "={{ $('Submit request').item.json.staff_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "940fe9cd-7cb4-510a-9200-5a7fcc9e8b24",
+      "name": "Send task",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        -200
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_ME",
+          "name": "SMTP demo"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select app.log_sent($1,'staff',$2,$3,$4)",
+        "options": {
+          "queryReplacement": "={{ [ $('Submit request').item.json.ref, $('Submit request').item.json.staff_to, $('Submit request').item.json.staff_subject, $('Submit request').item.json.staff_body ] }}"
+        }
+      },
+      "id": "31d942c1-ebe4-5319-aa70-f38e0139746f",
+      "name": "Log task",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1320,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "PG app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Demande de rappel — Exemple Rénovation (démo)</title>\n</head>\n<body>\n<p>{{ $('Submit request').item.json.message }}</p>\n<p><em>Démonstration sur données fictives.</em></p>\n</body>\n</html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "11520757-96f3-54df-800e-0a67a922822a",
+      "name": "Respond created",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1540,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Demande de rappel — Exemple Rénovation (démo)</title>\n</head>\n<body>\n<p>{{ $json.message }}</p>\n<p><em>Démonstration sur données fictives.</em></p>\n</body>\n</html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e87be578-767b-5a53-91e1-251febcca5ba",
+      "name": "Respond duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Demande de rappel — Exemple Rénovation (démo)</title>\n</head>\n<body>\n<p>Demande incomplète : {{ $json.message }}.</p>\n<p><em>Démonstration sur données fictives.</em></p>\n</body>\n</html>",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "39b0de64-c29c-5c1f-8158-b51efba50f4d",
+      "name": "Respond invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        660,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Submit request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit request": {
+      "main": [
+        [
+          {
+            "node": "Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status": {
+      "main": [
+        [
+          {
+            "node": "Send acknowledgement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send acknowledgement": {
+      "main": [
+        [
+          {
+            "node": "Log acknowledgement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log acknowledgement": {
+      "main": [
+        [
+          {
+            "node": "Send task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send task": {
+      "main": [
+        [
+          {
+            "node": "Log task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log task": {
+      "main": [
+        [
+          {
+            "node": "Respond created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  }
+}

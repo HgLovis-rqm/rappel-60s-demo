@@ -1,0 +1,278 @@
+{
+  "id": "cbdemoAlerts0001",
+  "name": "demo-alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "822aac72-9a79-54cd-b18c-060982b77fb5",
+      "name": "Every day at 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alerts-run",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3dd6cc74-d037-507b-a7c5-7473e49b8f44",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        100
+      ],
+      "webhookId": "e7f35f72-e1ac-5bd5-955c-f9b9208360be",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Alerts test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from app.due_alerts(coalesce($1::timestamptz, now()))",
+        "options": {
+          "queryReplacement": "={{ [ $json.body?.as_of ?? null ] }}"
+        }
+      },
+      "id": "5ff61938-62ff-576e-89ad-786bbe9d3f49",
+      "name": "Due alerts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        220,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "PG app"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "08799020-cc5a-592b-a58e-32cd59c0cfc0",
+              "leftValue": "={{ $json.ref }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5e8c6baf-33c9-5778-b872-7c6a741aaf25",
+      "name": "Any alert",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "contact@exemple-renovation.example",
+        "toEmail": "={{ $json.to_addr }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "15566039-15e4-5545-a95e-755192f40b42",
+      "name": "Send alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        -100
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_ME",
+          "name": "SMTP demo"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select app.log_sent($1,'alert',$2,$3,$4)",
+        "options": {
+          "queryReplacement": "={{ [ $('Any alert').item.json.ref, $('Any alert').item.json.to_addr, $('Any alert').item.json.subject, $('Any alert').item.json.body ] }}",
+          "queryBatching": "independently"
+        }
+      },
+      "id": "537b699f-1ffc-5975-9af5-4d5f777cf06f",
+      "name": "Log alert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        880,
+        -100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "PG app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"alerts\": $input.all().length } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "68b3b56f-6fdb-5219-9414-84385733a9aa",
+      "name": "Respond count",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1100,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"alerts\": 0 } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "8265a3e2-20d5-54a5-b832-5fd4bc99409f",
+      "name": "Respond none",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        660,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Every day at 08:00": {
+      "main": [
+        [
+          {
+            "node": "Due alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Due alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Due alerts": {
+      "main": [
+        [
+          {
+            "node": "Any alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any alert": {
+      "main": [
+        [
+          {
+            "node": "Send alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond none",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send alert": {
+      "main": [
+        [
+          {
+            "node": "Log alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log alert": {
+      "main": [
+        [
+          {
+            "node": "Respond count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  }
+}

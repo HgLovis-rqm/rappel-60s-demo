@@ -1,0 +1,231 @@
+{
+  "id": "cbdemoExport0001",
+  "name": "demo-export",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "export",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e38943f1-3f51-5e95-a3f3-1b0e5bb1b893",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "8a27a315-541e-5995-943c-603c189ce088"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "450b4188-ca44-5f1c-b16d-e1958329443f",
+              "leftValue": "={{ String($json.query.t ?? '') }}",
+              "rightValue": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "098d9cf5-ef5d-51c5-a95c-17b344b29d7f",
+      "name": "Token format",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select app.export_html($1,$2::uuid) as html",
+        "options": {
+          "queryReplacement": "={{ [ String($json.query.ref ?? ''), String($json.query.t ?? '') ] }}"
+        }
+      },
+      "id": "83ca47d8-cc4e-59a9-9825-f8e9e6749619",
+      "name": "Export dossier",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        440,
+        -100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "PG app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f0c50aea-8d4e-5033-9427-ff45cbff0ad1",
+              "leftValue": "={{ $json.html }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cfbc565d-7931-5278-a5d0-bee55de1b70d",
+      "name": "Nothing to export",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        660,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Demande de rappel — Exemple Rénovation (démo)</title>\n</head>\n<body>\n<h2>Lien invalide</h2>\n<p>Référence ou jeton inconnu. Rien n'a été enregistré.</p>\n<p><em>Démonstration sur données fictives.</em></p>\n</body>\n</html>",
+        "options": {
+          "responseCode": 404,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f3d9938f-d75d-54e8-8044-cdcb7487ff5a",
+      "name": "Respond not found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Content-Disposition",
+                "value": "=attachment; filename=\"dossier-{{ $('Webhook').item.json.query.ref }}.html\""
+              }
+            ]
+          }
+        }
+      },
+      "id": "906b1205-915f-5afb-8605-4f04616dfb88",
+      "name": "Respond file",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Token format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token format": {
+      "main": [
+        [
+          {
+            "node": "Export dossier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond not found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export dossier": {
+      "main": [
+        [
+          {
+            "node": "Nothing to export",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nothing to export": {
+      "main": [
+        [
+          {
+            "node": "Respond not found",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  }
+}
